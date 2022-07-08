@@ -1,0 +1,54 @@
+name: Validate feature to master on PRODUCTION
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  scratch-org-and-validation:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Install Salesforce CLI
+        run: |
+              wget https://developer.salesforce.com/media/salesforce-cli/sfdx/channels/stable/sfdx-linux-x64.tar.xz
+              mkdir ~/sfdx
+              tar xJf sfdx-linux-x64.tar.xz -C ~/sfdx --strip-components 1
+              echo "~/sfdx/bin" >> $GITHUB_PATH
+              export PATH=~/sfdx/bin:$PATH
+
+      - name: 'Checkout source code and pull all commits'
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install SFDX Git Delta
+        run: |
+              echo y | sfdx plugins:install sfdx-git-delta
+
+      - name: Generating delta package.xml
+        run: |
+              sfdx sgd:source:delta --to "HEAD" --from $(git merge-base HEAD origin/master) --output . -i .gitignore
+              echo "--- package.xml ---"
+              cat package/package.xml
+              echo "--- destructiveChangesPost.xml ---"
+              cat destructiveChanges/destructiveChangesPost.xml
+              echo "--- destructiveChangesPre.xml ---"
+              cat destructiveChanges/destructiveChangesPre.xml
+
+
+      - name: 'Populate authentication file with PROD_URL secret'
+        run: 'echo ${{secrets.PROD_URL}} > ./sfdxAuthUrl.txt'
+
+      - name: 'Checking credentials'
+        run: 'cat ./sfdxAuthUrl.txt'
+
+      - name: 'Authentication using credentials from file'
+        run: 'sfdx force:auth:sfdxurl:store -f ./sfdxAuthUrl.txt -a production -d'
+
+      - name: 'Forcing SOAP'
+        run: 'sfdx config:set restDeploy=false'
+        
+      - name: 'Validation'
+        run: 'sfdx force:source:deploy -x package/package.xml -c -g -u production -l RunLocalTests --postdestructivechanges=destructiveChanges/destructiveChangesPost.xml --predestructivechanges=destructiveChanges/destructiveChangesPre.xml'
