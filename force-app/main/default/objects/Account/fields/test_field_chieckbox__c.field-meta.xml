@@ -3,7 +3,7 @@
     <fullName>test_field_chieckbox__c</fullName>
     <defaultValue>false</defaultValue>
     <externalId>false</externalId>
-    <label>test field chieckbox</label>
+    <label>test field CHECKBOX</label>
     <trackFeedHistory>false</trackFeedHistory>
     <type>Checkbox</type>
 </CustomField>
