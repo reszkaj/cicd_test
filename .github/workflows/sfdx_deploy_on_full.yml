@@ -29,7 +29,7 @@ jobs:
 
       - name: Generating delta package.xml
         run: |
-              sfdx sgd:source:delta --to "HEAD" --from $(git merge-base HEAD origin/master) --output . -i .gitignore
+              sfdx sgd:source:delta --to "HEAD" --from "HEAD^" --output . -i .gitignore
               echo "--- package.xml ---"
               cat package/package.xml
               echo "--- destructiveChangesPost.xml ---"
